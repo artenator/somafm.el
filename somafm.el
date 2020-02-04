@@ -1,7 +1,7 @@
 ;;; -*- lexical-binding: t -*-
 ;; somafm --- 1password for emacs
 ;;; Commentary:
-(require 'request)
+(require 'url)
 (require 'json)
 (require 'cl-lib)
 (require 'dash)
@@ -33,6 +33,10 @@
   :options '(highest high low))
 
 (defvar somafm-channels nil)
+
+(defvar somafm-original-channel-order nil)
+
+(defvar somafm-current-channel-order nil)
 
 (defvar somafm-icons '())
 
@@ -66,6 +70,9 @@
         (json-array-type 'list))
     (json-read)))
 
+(defun somafm--extract-urls (urls)
+  ())
+
 (defun somafm--insert-channel (channel)
   (-let (((&plist :title title :id id :genre genre :listeners listeners :playlists playlists) channel)
          (somafm-channel-start (point)))
@@ -76,7 +83,7 @@
     (insert "\n")
     (somafm--create-overlay-type "somafm-channel" somafm-channel-start
                                  `((begin-content ,somafm-channel-start)
-                                   (stream-url ,(plist-get (car playlists) :url))
+                                   (stream-urls ,playlists)
                                    (id ,id)))))
 
 (defun somafm--insert-channels ()
@@ -106,37 +113,56 @@
 
 (defun somafm--refresh-channels ()
   (interactive)
-  (request
-    somafm-channels-url
-    :parser 'somafm--http-parser
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (setq somafm-channels (plist-get data :channels))
-                (somafm--refresh-icons)))))
+  (url-retrieve
+   somafm-channels-url
+   (lambda (status)
+     (goto-char (point-min))
+     (search-forward "\n\n" nil t)
+     (let* ((json-object-type 'plist)
+            (json-array-type 'list)
+            (data (json-read)))
+       (setq somafm-channels (plist-get data :channels))
+       (somafm--refresh-icons)))))
 
 (defun somafm--refresh-icons ()
   (let ((count 0)
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
       (-let (((&plist :id id :image image) channel))
-        (request
-          image
-          :parser 'somafm--image-parser
-          :success (cl-function
-                    (lambda (&key data &allow-other-keys)
-                      (setq somafm-icons (plist-put somafm-icons (intern id) data))
-                      (setq count (1+ count))
-                      (when (>= count max-count)
-                        (somafm--show-channels-buffer)))))))))
+        (message "retrieving %s..." image)
+        (url-retrieve
+         image
+         (lambda (status)
+           (message "retrieved! %s"image)
+           (goto-char (point-min))
+           (search-forward "\n\n" nil t)
+           (setq somafm-icons (plist-put somafm-icons (intern id) (buffer-substring (point) (point-max))))
+           (setq count (1+ count))
+           (when (>= count max-count)
+             (somafm--show-channels-buffer))))))))
+
+(defun somafm--get-url-from-quality (stream-urls given-quality)
+  (car (seq-filter (-lambda ((&plist :quality quality))
+                     (string-equal quality given-quality))
+                   stream-urls)))
+
+(defun somafm--quality-handler (stream-urls quality)
+  (pcase quality
+    ('highest (somafm--get-url-from-quality stream-urls "highest"))
+    ('high (somafm--get-url-from-quality stream-urls "high"))
+    ('low (somafm--get-url-from-quality stream-urls "low"))))
 
 (defun somafm--play ()
   (interactive)
   (let* ((channel-ol (somafm--get-overlay-by "somafm-channel"))
-         (stream-url (overlay-get channel-ol 'stream-url))
+         (stream-urls (overlay-get channel-ol 'stream-urls))
          (id (overlay-get channel-ol 'id)))
     (somafm--stop)
     (setq somafm-current-channel id)
-    (start-process-shell-command "somafm player" "*somafm player*" (format "mpv %s 2> /dev/null" stream-url))
+    (message "%s" (somafm--quality-handler stream-urls somafm-sound-quality))
+    (start-process-shell-command "somafm player" "*somafm player*"
+                                 (format "mpv %s 2> /dev/null"
+                                         (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))
     (somafm--show-channels-buffer)))
 
 (defun somafm--stop ()
