@@ -91,7 +91,7 @@
                                    (id ,id)))))
 
 (defun somafm--get-channel-by-id (channel-list channel-id)
-  "Given a CHANNEL-ID, get the specific channel from CHANNEL-LIST"
+  "Given a CHANNEL-ID, get the specific channel from CHANNEL-LIST."
   (car (seq-filter (-lambda ((&plist :id id))
                      (string-equal id channel-id))
                    channel-list)))
