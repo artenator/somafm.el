@@ -203,10 +203,16 @@
 (defun somafm--stop ()
   "Stop streaming the channel that is currently playing."
   (interactive)
-  (-when-let ((player-proc (get-process "somafm player")))
+  (-when-let (player-proc (get-process "somafm player"))
     (delete-process player-proc)
     (setq somafm-current-channel nil)
-    (somafm--show-channels-buffer)))
+    (with-current-buffer (get-buffer-create "*somafm channels*")
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-min))
+          (search-forward "►" nil t)
+          (delete-char -1)
+          (kill-line))))))
 
 (defun somafm--sort ()
   "Sort the channels list view, or unsort it if the list is already sorted."
