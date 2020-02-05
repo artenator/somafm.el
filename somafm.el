@@ -172,6 +172,17 @@
     ('high (somafm--get-url-from-quality stream-urls "high"))
     ('low (somafm--get-url-from-quality stream-urls "low"))))
 
+(defun somafm--update-current-song (current-song)
+  "Update the channels buffer with the current song CURRENT-SONG, based on the output of the somafm player process."
+  (let ((channels-buf (get-buffer-create "*somafm channels*"))
+        (inhibit-read-only t))
+    (with-current-buffer channels-buf
+      (save-excursion
+        (goto-char (point-min))
+        (when (search-forward "►")
+          (insert " (" current-song ")"))
+        (read-only-mode)))))
+
 (defun somafm--play ()
   "Play the currently selected channel at point."
   (interactive)
@@ -180,10 +191,13 @@
          (id (overlay-get channel-ol 'id)))
     (somafm--stop)
     (setq somafm-current-channel id)
-    (start-process-shell-command "somafm player" "*somafm player*"
-                                 (format "mpv %s 2> /dev/null"
-                                         (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))
-    (somafm--show-channels-buffer)))
+    (let ((player-proc (start-process-shell-command "somafm player" "*somafm player*"
+                                                    (format "mpv %s 2> /dev/null"
+                                                            (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))))
+      (set-process-filter player-proc (lambda (_ output)
+                                        (when (string-match "title: \\(.*\\)" output)
+                                          (somafm--update-current-song (match-string 1 output)))))
+      (somafm--show-channels-buffer))))
 
 (defun somafm--stop ()
   "Stop streaming the channel that is currently playing."
