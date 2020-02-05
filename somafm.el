@@ -1,10 +1,11 @@
 ;;; -*- lexical-binding: t -*-
-;; somafm --- 1password for emacs
+;; somafm.el --- A soma.fm interface for emacs
 ;;; Commentary:
 (require 'url)
 (require 'json)
 (require 'cl-lib)
 (require 'dash)
+(require 'request)
 
 (defconst somafm-mode-map
   (let ((keymap (make-keymap)))
@@ -43,11 +44,6 @@
 (defvar somafm-current-channel nil)
 
 (defvar somafm-currently-sorted nil)
-
-(setq somafm-channels nil)
-(setq somafm-icons nil)
-(setq somafm-original-channel-order '()
-      somafm-current-channel-order '())
 
 (defun somafm--get-in-plist (plist &rest keys)
   (while keys
@@ -119,38 +115,35 @@
 
 (defun somafm--refresh-channels ()
   (interactive)
-  (url-retrieve
+  (request
    somafm-channels-url
-   (lambda (status)
-     (goto-char (point-min))
-     (search-forward "\n\n" nil t)
-     (let* ((json-object-type 'plist)
-            (json-array-type 'list)
-            (data (json-read))
-            (channels (plist-get data :channels))
-            (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
-                                               id)
-                                             channels)))
-       (setq somafm-channels channels)
-       (setq somafm-original-channel-order retrieved-channel-order)
-       (when (not somafm-current-channel-order)
-         (setq somafm-current-channel-order retrieved-channel-order))
-       (somafm--refresh-icons)))))
+   :parser 'somafm--http-parser
+   :success (cl-function
+             (lambda (&key data &allow-other-keys)
+               (let* ((channels (plist-get data :channels))
+                      (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
+                                                         id)
+                                                       channels)))
+                 (setq somafm-channels channels)
+                 (setq somafm-original-channel-order retrieved-channel-order)
+                 (when (not somafm-current-channel-order)
+                   (setq somafm-current-channel-order retrieved-channel-order))
+                 (somafm--refresh-icons))))))
 
 (defun somafm--refresh-icons ()
   (let ((count 0)
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
       (-let (((&plist :id id :image image) channel))
-        (url-retrieve
+        (request
          image
-         (lambda (status)
-           (goto-char (point-min))
-           (search-forward "\n\n" nil t)
-           (setq somafm-icons (plist-put somafm-icons (intern id) (buffer-substring (point) (point-max))))
-           (setq count (1+ count))
-           (when (>= count max-count)
-             (somafm--show-channels-buffer))))))))
+         :parser 'somafm--image-parser
+         :success (cl-function
+                   (lambda (&key data &allow-other-keys)
+                     (setq somafm-icons (plist-put somafm-icons (intern id) data))
+                     (setq count (1+ count))
+                     (when (>= count max-count)
+                       (somafm--show-channels-buffer)))))))))
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
   (car (seq-filter (-lambda ((&plist :quality quality))
@@ -185,16 +178,19 @@
 (defun somafm--sort ()
   (interactive)
   (if (not somafm-currently-sorted)
-      (setq somafm-current-channel-order
-            (->> somafm-channels
-                 (seq-sort-by (-lambda ((&plist :listeners listeners))
-                                (string-to-number listeners))
-                              #'>)
-                 (mapcar (-lambda ((&plist :id id))
-                           id))))
-    (setq somafm-current-channel-order somafm-original-channel-order))
-  (setq somafm-currently-sorted (not somafm-currently-sorted))
-  (somafm--show-channels-buffer))
+      (progn
+        (setq somafm-current-channel-order
+              (->> somafm-channels
+                   (seq-sort-by (-lambda ((&plist :listeners listeners))
+                                  (string-to-number listeners))
+                                #'>)
+                   (mapcar (-lambda ((&plist :id id))
+                             id))))
+        (setq somafm-currently-sorted t))
+    (setq somafm-current-channel-order somafm-original-channel-order)
+    (setq somafm-currently-sorted nil))
+  (somafm--show-channels-buffer)
+  (move-beginning-of-line nil))
 
 (defun somafm ()
   (interactive)
