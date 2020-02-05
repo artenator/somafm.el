@@ -34,16 +34,20 @@
 
 (defvar somafm-channels nil)
 
-(defvar somafm-original-channel-order nil)
+(defvar somafm-original-channel-order '())
 
-(defvar somafm-current-channel-order nil)
+(defvar somafm-current-channel-order '())
 
 (defvar somafm-icons '())
 
 (defvar somafm-current-channel nil)
 
+(defvar somafm-currently-sorted nil)
+
 (setq somafm-channels nil)
 (setq somafm-icons nil)
+(setq somafm-original-channel-order '()
+      somafm-current-channel-order '())
 
 (defun somafm--get-in-plist (plist &rest keys)
   (while keys
@@ -70,9 +74,6 @@
         (json-array-type 'list))
     (json-read)))
 
-(defun somafm--extract-urls (urls)
-  ())
-
 (defun somafm--insert-channel (channel)
   (-let (((&plist :title title :id id :genre genre :listeners listeners :playlists playlists) channel)
          (somafm-channel-start (point)))
@@ -86,9 +87,14 @@
                                    (stream-urls ,playlists)
                                    (id ,id)))))
 
+(defun somafm--get-channel-by-id (channel-list channel-id)
+  (car (seq-filter (-lambda ((&plist :id id))
+                     (string-equal id channel-id))
+                   channel-list)))
+
 (defun somafm--insert-channels ()
-  (dolist (channel somafm-channels)
-    (somafm--insert-channel channel)))
+  (dolist (channel-id somafm-current-channel-order)
+    (somafm--insert-channel (somafm--get-channel-by-id somafm-channels channel-id))))
 
 (defun somafm--show-channels-buffer ()
   (let ((somafm-buffer (get-buffer-create "*somafm channels*"))
@@ -120,8 +126,15 @@
      (search-forward "\n\n" nil t)
      (let* ((json-object-type 'plist)
             (json-array-type 'list)
-            (data (json-read)))
-       (setq somafm-channels (plist-get data :channels))
+            (data (json-read))
+            (channels (plist-get data :channels))
+            (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
+                                               id)
+                                             channels)))
+       (setq somafm-channels channels)
+       (setq somafm-original-channel-order retrieved-channel-order)
+       (when (not somafm-current-channel-order)
+         (setq somafm-current-channel-order retrieved-channel-order))
        (somafm--refresh-icons)))))
 
 (defun somafm--refresh-icons ()
@@ -129,11 +142,9 @@
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
       (-let (((&plist :id id :image image) channel))
-        (message "retrieving %s..." image)
         (url-retrieve
          image
          (lambda (status)
-           (message "retrieved! %s"image)
            (goto-char (point-min))
            (search-forward "\n\n" nil t)
            (setq somafm-icons (plist-put somafm-icons (intern id) (buffer-substring (point) (point-max))))
@@ -159,7 +170,6 @@
          (id (overlay-get channel-ol 'id)))
     (somafm--stop)
     (setq somafm-current-channel id)
-    (message "%s" (somafm--quality-handler stream-urls somafm-sound-quality))
     (start-process-shell-command "somafm player" "*somafm player*"
                                  (format "mpv %s 2> /dev/null"
                                          (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))
@@ -174,11 +184,16 @@
 
 (defun somafm--sort ()
   (interactive)
-  (setq somafm-channels
-        (seq-sort-by (-lambda ((&plist :listeners listeners))
-                       (string-to-number listeners))
-                     #'>
-                     somafm-channels))
+  (if (not somafm-currently-sorted)
+      (setq somafm-current-channel-order
+            (->> somafm-channels
+                 (seq-sort-by (-lambda ((&plist :listeners listeners))
+                                (string-to-number listeners))
+                              #'>)
+                 (mapcar (-lambda ((&plist :id id))
+                           id))))
+    (setq somafm-current-channel-order somafm-original-channel-order))
+  (setq somafm-currently-sorted (not somafm-currently-sorted))
   (somafm--show-channels-buffer))
 
 (defun somafm ()
