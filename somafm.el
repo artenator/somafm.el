@@ -105,14 +105,15 @@
   "Get or create the main somafm channels buffer, and insert the formatted channels list."
   (let ((somafm-buffer (get-buffer-create "*somafm channels*"))
         (inhibit-read-only t))
-    (let ((saved-pos (point)))
-      (with-current-buffer somafm-buffer
-        (switch-to-buffer (current-buffer))
-        (erase-buffer)
-        (somafm--insert-channels)
-        (read-only-mode)
-        (somafm-mode)
-        (goto-char saved-pos)))))
+    (with-current-buffer somafm-buffer
+      (switch-to-buffer (current-buffer))
+      (erase-buffer)
+      (somafm--insert-channels)
+      (read-only-mode)
+      (somafm-mode)
+      (goto-char (point-min))
+      (when (search-forward "►" nil t)
+        (beginning-of-line)))))
 
 (defun somafm--insert-image (bytes)
   "Given a string representation BYTES of bytes, give the proper image encoding and insert an image at point."
@@ -179,7 +180,7 @@
     (with-current-buffer channels-buf
       (save-excursion
         (goto-char (point-min))
-        (when (search-forward "►")
+        (when (search-forward "►" nil t)
           (insert " (" current-song ")"))
         (read-only-mode)))))
 
