@@ -1,7 +1,9 @@
-;;; -*- lexical-binding: t -*-
-;; somafm.el --- A soma.fm interface for emacs
+;; somafm.el --- A soma.fm interface for emacs -*- lexical-binding: t -*-
 ;;; Commentary:
-(require 'url)
+;; somafm.el brings a simple user interface for soma.fm to Emacs.
+
+;;; Code:
+
 (require 'json)
 (require 'cl-lib)
 (require 'dash)
@@ -46,12 +48,14 @@
 (defvar somafm-currently-sorted nil)
 
 (defun somafm--get-in-plist (plist &rest keys)
+  "A helper function that gets a value at KEYS from a nested PLIST."
   (while keys
     (setq plist (plist-get plist (car keys)))
     (setq keys (cdr keys)))
   plist)
 
 (defun somafm--create-overlay-type (type start-point props)
+  "Create an overlay with type TYPE and at starting point START-POINT until current position of point, with the properties PROPS."
   (let ((ol (make-overlay start-point (point))))
     (overlay-put ol 'somafm-type type)
     (dolist (prop props)
@@ -59,6 +63,7 @@
     ol))
 
 (defun somafm--get-overlay-by (s &optional pos)
+  "Get an overlay of type S at the current point or at POS."
   (let ((all-overlays (overlays-at (or pos (point)))))
     (car (seq-filter (lambda (ol)
 		       (let ((ol-type (overlay-get ol 'somafm-type)))
@@ -66,11 +71,13 @@
 		     all-overlays))))
 
 (defun somafm--http-parser ()
+  "JSON parser for http requests."
   (let ((json-object-type 'plist)
         (json-array-type 'list))
     (json-read)))
 
 (defun somafm--insert-channel (channel)
+  "Insert CHANNEL in a formatted structure into the current buffer."
   (-let (((&plist :title title :id id :genre genre :listeners listeners :playlists playlists) channel)
          (somafm-channel-start (point)))
     (somafm--insert-image (plist-get somafm-icons (intern id)))
@@ -84,15 +91,18 @@
                                    (id ,id)))))
 
 (defun somafm--get-channel-by-id (channel-list channel-id)
+  "Given a CHANNEL-ID, get the specific channel from CHANNEL-LIST"
   (car (seq-filter (-lambda ((&plist :id id))
                      (string-equal id channel-id))
                    channel-list)))
 
 (defun somafm--insert-channels ()
+  "Insert a formatted version of all channels in the current channel list in the current buffer."
   (dolist (channel-id somafm-current-channel-order)
     (somafm--insert-channel (somafm--get-channel-by-id somafm-channels channel-id))))
 
 (defun somafm--show-channels-buffer ()
+  "Get or create the main somafm channels buffer, and insert the formatted channels list."
   (let ((somafm-buffer (get-buffer-create "*somafm channels*"))
         (inhibit-read-only t))
     (let ((saved-pos (point)))
@@ -105,15 +115,18 @@
         (goto-char saved-pos)))))
 
 (defun somafm--insert-image (bytes)
+  "Given a string representation BYTES of bytes, give the proper image encoding and insert an image at point."
   (-> bytes
       (encode-coding-string 'binary)
       (create-image nil t)
       (insert-image)))
 
 (defun somafm--image-parser ()
+  "Image parser for http requests."
   (buffer-substring (point-min) (point-max)))
 
 (defun somafm--refresh-channels ()
+  "Refresh the channels by sending a request to the soma.fm API, and retrieve all the channel images."
   (interactive)
   (request
    somafm-channels-url
@@ -131,6 +144,7 @@
                  (somafm--refresh-icons))))))
 
 (defun somafm--refresh-icons ()
+  "Send requests to retrieve the images for each channel in SOMAFM-CHANNELS."
   (let ((count 0)
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
@@ -146,17 +160,20 @@
                        (somafm--show-channels-buffer)))))))))
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
+  "Given a list of urls STREAM-URLS and a quality setting GIVEN-QUALITY, return the URL with the matching desired quality setting."
   (car (seq-filter (-lambda ((&plist :quality quality))
                      (string-equal quality given-quality))
                    stream-urls)))
 
 (defun somafm--quality-handler (stream-urls quality)
+  "Given a list of stream urls STREAM-URLS, and desired quality QUALITY, pass to the filter function to retrieve the url."
   (pcase quality
     ('highest (somafm--get-url-from-quality stream-urls "highest"))
     ('high (somafm--get-url-from-quality stream-urls "high"))
     ('low (somafm--get-url-from-quality stream-urls "low"))))
 
 (defun somafm--play ()
+  "Play the currently selected channel at point."
   (interactive)
   (let* ((channel-ol (somafm--get-overlay-by "somafm-channel"))
          (stream-urls (overlay-get channel-ol 'stream-urls))
@@ -169,13 +186,15 @@
     (somafm--show-channels-buffer)))
 
 (defun somafm--stop ()
+  "Stop streaming the channel that is currently playing."
   (interactive)
-  (when-let ((player-proc (get-process "somafm player")))
+  (-when-let ((player-proc (get-process "somafm player")))
     (delete-process player-proc)
     (setq somafm-current-channel nil)
     (somafm--show-channels-buffer)))
 
 (defun somafm--sort ()
+  "Sort the channels list view, or unsort it if the list is already sorted."
   (interactive)
   (if (not somafm-currently-sorted)
       (progn
@@ -193,6 +212,7 @@
   (move-beginning-of-line nil))
 
 (defun somafm ()
+  "Refresh channels if we don't have the list already, otherwise show the channel buffer."
   (interactive)
   (if (not somafm-channels)
       (somafm--refresh-channels)
