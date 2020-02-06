@@ -87,7 +87,7 @@
     (when (string-equal id somafm-current-channel)
       (insert (propertize "►" 'font-lock-face '(:height 5)))
       (when somafm-current-song
-        (insert " " (somafm--format-current-song somafm-current-song))))
+        (somafm--insert-current-song somafm-current-song)))
     (insert "\n")
     (somafm--create-overlay-type "somafm-channel" somafm-channel-start
                                  `((begin-content ,somafm-channel-start)
@@ -181,6 +181,15 @@
   "Formats the current song CURRENT-SONG to be wrapped with parentheses."
   (format "(%s)" current-song))
 
+(defun somafm--clear-rest-of-line ()
+  "Kill line if we are not at the end of the line already."
+  (when (not (char-equal (char-after (point)) ?\n))
+    (kill-line)))
+
+(defun somafm--insert-current-song (current-song)
+  "Insert the current song CURRENT-SONG at point in the current buffer."
+  (insert " " (somafm--format-current-song current-song)))
+
 (defun somafm--update-current-song (current-song)
   "Update the channels buffer with the current song CURRENT-SONG, based on the output of the somafm player process."
   (let ((channels-buf (get-buffer-create "*somafm channels*"))
@@ -190,9 +199,8 @@
       (save-excursion
         (goto-char (point-min))
         (when (search-forward "►" nil t)
-          (when (not (char-equal (char-after (point)) ?\n))
-            (kill-line))
-          (insert " " (somafm--format-current-song current-song)))
+          (somafm--clear-rest-of-line)
+          (somafm--insert-current-song current-song))
         (read-only-mode)))))
 
 (defun somafm--play ()
