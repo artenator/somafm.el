@@ -47,6 +47,8 @@
 
 (defvar somafm-currently-sorted nil)
 
+(defvar somafm-current-song nil)
+
 (defun somafm--get-in-plist (plist &rest keys)
   "A helper function that gets a value at KEYS from a nested PLIST."
   (while keys
@@ -177,6 +179,7 @@
   "Update the channels buffer with the current song CURRENT-SONG, based on the output of the somafm player process."
   (let ((channels-buf (get-buffer-create "*somafm channels*"))
         (inhibit-read-only t))
+    (setq somafm-current-song current-song)
     (with-current-buffer channels-buf
       (save-excursion
         (goto-char (point-min))
@@ -231,6 +234,12 @@
     (setq somafm-currently-sorted nil))
   (somafm--show-channels-buffer)
   (move-beginning-of-line nil))
+
+(defun somafm-current-song ()
+  "Display the current song in the echo area."
+  (interactive)
+  (when somafm-current-song
+    (message "Somafm current song: %s" somafm-current-song)))
 
 (defun somafm ()
   "Refresh channels if we don't have the list already, otherwise show the channel buffer."
