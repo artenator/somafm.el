@@ -1,4 +1,4 @@
-;; somafm.el --- A soma.fm interface for emacs -*- lexical-binding: t -*-
+;;; somafm.el --- A soma.fm interface for emacs -*- lexical-binding: t -*-
 ;;; Commentary:
 ;; somafm.el brings a simple user interface for soma.fm to Emacs.
 
