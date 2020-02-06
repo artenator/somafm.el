@@ -134,19 +134,19 @@
   "Refresh the channels by sending a request to the soma.fm API, and retrieve all the channel images."
   (interactive)
   (request
-   somafm-channels-url
-   :parser 'somafm--http-parser
-   :success (cl-function
-             (lambda (&key data &allow-other-keys)
-               (let* ((channels (plist-get data :channels))
-                      (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
-                                                         id)
-                                                       channels)))
-                 (setq somafm-channels channels)
-                 (setq somafm-original-channel-order retrieved-channel-order)
-                 (when (not somafm-current-channel-order)
-                   (setq somafm-current-channel-order retrieved-channel-order))
-                 (somafm--refresh-icons))))))
+    somafm-channels-url
+    :parser 'somafm--http-parser
+    :success (cl-function
+              (lambda (&key data &allow-other-keys)
+                (let* ((channels (plist-get data :channels))
+                       (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
+                                                          id)
+                                                        channels)))
+                  (setq somafm-channels channels)
+                  (setq somafm-original-channel-order retrieved-channel-order)
+                  (when (not somafm-current-channel-order)
+                    (setq somafm-current-channel-order retrieved-channel-order))
+                  (somafm--refresh-icons))))))
 
 (defun somafm--refresh-icons ()
   "Send requests to retrieve the images for each channel in SOMAFM-CHANNELS."
@@ -155,14 +155,14 @@
     (dolist (channel somafm-channels)
       (-let (((&plist :id id :image image) channel))
         (request
-         image
-         :parser 'somafm--image-parser
-         :success (cl-function
-                   (lambda (&key data &allow-other-keys)
-                     (setq somafm-icons (plist-put somafm-icons (intern id) data))
-                     (setq count (1+ count))
-                     (when (>= count max-count)
-                       (somafm--show-channels-buffer)))))))))
+          image
+          :parser 'somafm--image-parser
+          :success (cl-function
+                    (lambda (&key data &allow-other-keys)
+                      (setq somafm-icons (plist-put somafm-icons (intern id) data))
+                      (setq count (1+ count))
+                      (when (>= count max-count)
+                        (somafm--show-channels-buffer)))))))))
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
   "Given a list of urls STREAM-URLS and a quality setting GIVEN-QUALITY, return the URL with the matching desired quality setting."
@@ -183,7 +183,7 @@
 
 (defun somafm--clear-rest-of-line ()
   "Kill line if we are not at the end of the line already."
-  (when (not (char-equal (char-after (point)) ?\n))
+  (unless (char-equal (char-after (point)) ?\n)
     (kill-line)))
 
 (defun somafm--insert-current-song (current-song)
