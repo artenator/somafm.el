@@ -204,7 +204,7 @@
 (defun somafm--clear-rest-of-line ()
   "Kill line if we are not at the end of the line already."
   (unless (char-equal (char-after (point)) ?\n)
-    (kill-line)))
+    (delete-region (line-beginning-position) (line-end-position))))
 
 (defun somafm--insert-current-song (current-song)
   "Insert the current song CURRENT-SONG at point in the current buffer."
@@ -252,7 +252,7 @@
           (goto-char (point-min))
           (search-forward "►" nil t)
           (delete-char -1)
-          (kill-line))))))
+          (delete-region (line-beginning-position) (line-end-position)))))))
 
 (defun somafm--sort ()
   "Sort the channels list view, or unsort it if the list is already sorted."
