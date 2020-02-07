@@ -139,19 +139,29 @@
   (dolist (channel-id somafm-current-channel-order)
     (somafm--insert-channel (somafm--get-channel-by-id somafm-channels channel-id))))
 
-(defun somafm--show-channels-buffer ()
-  "Get or create the main somafm channels buffer, and insert the formatted channels list."
-  (let ((somafm-buffer (get-buffer-create "*somafm channels*"))
-        (inhibit-read-only t))
-    (with-current-buffer somafm-buffer
-      (switch-to-buffer (current-buffer))
-      (erase-buffer)
-      (somafm--insert-channels)
-      (read-only-mode)
-      (somafm-mode)
+(defun somafm--redraw-channels-buffer ()
+  (let ((inhibit-read-only t))
+    (-when-let (somafm-buffer (get-buffer "*somafm channels*"))
+      (with-current-buffer somafm-buffer
+        (erase-buffer)
+        (somafm--insert-channels)
+        (read-only-mode)
+        (somafm-mode)))))
+
+(defun somafm--goto-current-song ()
+  (-when-let (channels-buffer (get-buffer "*somafm channels*"))
+    (with-current-buffer channels-buffer
       (goto-char (point-min))
       (when (search-forward "►" nil t)
         (beginning-of-line)))))
+
+(defun somafm--show-channels-buffer ()
+  "Get or create the main somafm channels buffer, and insert the formatted channels list."
+  (let ((somafm-buffer (get-buffer-create "*somafm channels*")))
+    (with-current-buffer somafm-buffer
+      (switch-to-buffer (current-buffer))
+      (somafm--redraw-channels-buffer)
+      (somafm--goto-current-song))))
 
 (defun somafm--insert-image (bytes)
   "Given a string representation BYTES of bytes, give the proper image encoding and insert an image at point."
@@ -164,8 +174,8 @@
   "Image parser for http requests."
   (buffer-substring (point-min) (point-max)))
 
-(defun somafm--refresh-channels ()
-  "Refresh the channels by sending a request to the soma.fm API, and retrieve all the channel images."
+(defun somafm--refresh-channels (&optional on-success)
+  "Refresh the channels by sending a request to the soma.fm API, and retrieve all the channel images.  Call ON-SUCCESS function if provided."
   (interactive)
   (request
     somafm-channels-url
@@ -178,12 +188,13 @@
                                                         channels)))
                   (setq somafm-channels channels)
                   (setq somafm-original-channel-order retrieved-channel-order)
+                  (setq somafm-last-refresh-time (float-time))
                   (when (not somafm-current-channel-order)
                     (setq somafm-current-channel-order retrieved-channel-order))
-                  (somafm--refresh-icons))))))
+                  (somafm--refresh-icons on-success))))))
 
-(defun somafm--refresh-icons ()
-  "Send requests to retrieve the images for each channel in SOMAFM-CHANNELS."
+(defun somafm--refresh-icons (&optional on-success)
+  "Send requests to retrieve the images for each channel in SOMAFM-CHANNELS.  Takes an optional function ON-SUCCESS that is triggered when all the icons have been retrieved."
   (let ((count 0)
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
@@ -195,8 +206,8 @@
                     (lambda (&key data &allow-other-keys)
                       (setq somafm-icons (plist-put somafm-icons (intern id) data))
                       (setq count (1+ count))
-                      (when (>= count max-count)
-                        (somafm--show-channels-buffer)))))))))
+                      (when (and on-success (>= count max-count))
+                        (funcall on-success)))))))))
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
   "Given a list of urls STREAM-URLS and a quality setting GIVEN-QUALITY, return the URL with the matching desired quality setting."
@@ -226,16 +237,29 @@
 
 (defun somafm--update-current-song (current-song)
   "Update the channels buffer with the current song CURRENT-SONG, based on the output of the somafm player process."
-  (let ((channels-buf (get-buffer-create "*somafm channels*"))
-        (inhibit-read-only t))
+  (let ((inhibit-read-only t))
     (setq somafm-current-song current-song)
-    (with-current-buffer channels-buf
-      (save-excursion
-        (goto-char (point-min))
-        (when (search-forward "►" nil t)
-          (somafm--clear-rest-of-line)
-          (somafm--insert-current-song current-song))
-        (read-only-mode)))))
+    (-when-let (channels-buf (get-buffer "*somafm channels*"))
+      (with-current-buffer channels-buf
+        (save-excursion
+          (goto-char (point-min))
+          (when (search-forward "►" nil t)
+            (somafm--clear-rest-of-line)
+            (somafm--insert-current-song current-song))
+          (read-only-mode))))))
+
+(defun somafm--play-by-channel-id (channel-id)
+  (setq somafm-current-channel channel-id)
+  (-let* (((&plist :playlists stream-urls) (somafm--get-channel-by-id somafm-channels channel-id))
+          (player-proc (start-process-shell-command "somafm player"
+                                                    "*somafm player*"
+                                                    (format "%s %s 2> /dev/null"
+                                                            somafm-player-command
+                                                            (plist-get (somafm--quality-handler stream-urls somafm-sound-quality)
+                                                                       :url)))))
+    (set-process-filter player-proc (lambda (_ output)
+                                      (when (string-match "title: \\(.*\\)" output)
+                                        (somafm--update-current-song (match-string 1 output)))))))
 
 (defun somafm--play ()
   "Play the currently selected channel at point."
@@ -244,15 +268,8 @@
          (stream-urls (overlay-get channel-ol 'stream-urls))
          (id (overlay-get channel-ol 'id)))
     (somafm--stop)
-    (setq somafm-current-channel id)
-    (let ((player-proc (start-process-shell-command "somafm player" "*somafm player*"
-                                                    (format "%s %s 2> /dev/null"
-                                                            somafm-player-command
-                                                            (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))))
-      (set-process-filter player-proc (lambda (_ output)
-                                        (when (string-match "title: \\(.*\\)" output)
-                                          (somafm--update-current-song (match-string 1 output)))))
-      (somafm--show-channels-buffer))))
+    (somafm--play-by-channel-id id)
+    (somafm--show-channels-buffer)))
 
 (defun somafm--stop ()
   "Stop streaming the channel that is currently playing."
@@ -261,13 +278,14 @@
     (delete-process player-proc)
     (setq somafm-current-channel nil)
     (setq somafm-current-song nil)
-    (with-current-buffer (get-buffer-create "*somafm channels*")
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (goto-char (point-min))
-          (search-forward "►" nil t)
-          (delete-char -1)
-          (delete-region (point) (line-end-position)))))))
+    (-when-let (channels-buf (get-buffer "*somafm channels*"))
+      (with-current-buffer channels-buf
+        (let ((inhibit-read-only t))
+          (save-excursion
+            (goto-char (point-min))
+            (when (search-forward "►" nil t)
+              (delete-char -1)
+              (somafm--clear-rest-of-line))))))))
 
 (defun somafm--sort ()
   "Sort the channels list view, or unsort it if the list is already sorted."
@@ -293,19 +311,38 @@
   (when somafm-current-song
     (message "Somafm current song: %s" somafm-current-song)))
 
-(defun somafm--refresh-time-elapsed ()
+(defun somafm--refresh-time-elapsed-p ()
   "Determines whether the refresh threshold has been reached."
   (let ((seconds-since-last-refresh (->> somafm-last-refresh-time
-                                      (time-subtract nil)
-                                      (float-time))))
+                                         (time-subtract nil)
+                                         (float-time))))
     (> seconds-since-last-refresh somafm-refresh-interval)))
 
 (defun somafm ()
-  "Refresh channels if we don't have the list already, otherwise show the channel buffer."
+  "Refresh channels if we don't have the list already, or if the refresh interval has passed, otherwise show the channel buffer."
   (interactive)
-  (if (or (not somafm-channels) (somafm--refresh-time-elapsed))
-      (somafm--refresh-channels)
+  (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
+      (somafm--refresh-channels t)
     (somafm--show-channels-buffer)))
+
+(defun somafm--completing-read ()
+  (let* ((channels-kv (mapcar (lambda (channel-id)
+                                (-let (((&plist :title :id) (somafm--get-channel-by-id somafm-channels channel-id)))
+                                  (cons title id)))
+                              somafm-current-channel-order))
+         (channel-id (-> (completing-read "Pick a channel:" channels-kv)
+                         (assoc channels-kv)
+                         (cdr))))
+    (somafm--stop)
+    (somafm--play-by-channel-id channel-id)
+    (somafm--redraw-channels-buffer)
+    (somafm--goto-current-song)))
+
+(defun somafm-by-completion ()
+  (interactive)
+  (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
+      (somafm--refresh-channels 'somafm--completing-read)
+    (somafm--completing-read)))
 
 (provide 'somafm)
 ;;; somafm.el ends here
