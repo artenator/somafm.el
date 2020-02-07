@@ -190,7 +190,7 @@
                   (setq somafm-channels channels)
                   (setq somafm-original-channel-order retrieved-channel-order)
                   (setq somafm-last-refresh-time (float-time))
-                  (when (not somafm-current-channel-order)
+                  (unless somafm-current-channel-order
                     (setq somafm-current-channel-order retrieved-channel-order))
                   (somafm--refresh-icons on-success))))))
 
