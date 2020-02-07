@@ -130,9 +130,10 @@
 
 (defun somafm--get-channel-by-id (channel-list channel-id)
   "Given a CHANNEL-ID, get the specific channel from CHANNEL-LIST."
-  (car (seq-filter (-lambda ((&plist :id id))
-                     (string-equal id channel-id))
-                   channel-list)))
+  (->> channel-list
+       (seq-filter (-lambda ((&plist :id))
+                     (string-equal id channel-id)))
+       (car)))
 
 (defun somafm--insert-channels ()
   "Insert a formatted version of all channels in the current channel list in the current buffer."
@@ -183,7 +184,7 @@
     :success (cl-function
               (lambda (&key data &allow-other-keys)
                 (let* ((channels (plist-get data :channels))
-                       (retrieved-channel-order (mapcar (-lambda ((&plist :id id))
+                       (retrieved-channel-order (mapcar (-lambda ((&plist :id))
                                                           id)
                                                         channels)))
                   (setq somafm-channels channels)
@@ -211,7 +212,7 @@
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
   "Given a list of urls STREAM-URLS and a quality setting GIVEN-QUALITY, return the URL with the matching desired quality setting."
-  (car (seq-filter (-lambda ((&plist :quality quality))
+  (car (seq-filter (-lambda ((&plist :quality))
                      (string-equal quality given-quality))
                    stream-urls)))
 
@@ -294,10 +295,10 @@
       (progn
         (setq somafm-current-channel-order
               (->> somafm-channels
-                   (seq-sort-by (-lambda ((&plist :listeners listeners))
+                   (seq-sort-by (-lambda ((&plist :listeners))
                                   (string-to-number listeners))
                                 #'>)
-                   (mapcar (-lambda ((&plist :id id))
+                   (mapcar (-lambda ((&plist :id))
                              id))))
         (setq somafm-currently-sorted t))
     (setq somafm-current-channel-order somafm-original-channel-order)
