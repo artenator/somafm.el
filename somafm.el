@@ -55,6 +55,18 @@
   :type 'symbol
   :options '(highest high low))
 
+(defcustom somafm-player-command "mpv"
+  "Command for the media player."
+  :group 'somafm
+  :type 'string)
+
+(defcustom somafm-refresh-interval 300
+  "Number of seconds needed before the channels are automatically refreshed."
+  :group 'somafm
+  :type 'integer)
+
+(defvar somafm-test (float-time))
+
 (defvar somafm-channels nil)
 
 (defvar somafm-original-channel-order '())
@@ -68,6 +80,8 @@
 (defvar somafm-currently-sorted nil)
 
 (defvar somafm-current-song nil)
+
+(defvar somafm-last-refresh-time 0)
 
 (defun somafm--get-in-plist (plist &rest keys)
   "A helper function that gets a value at KEYS from a nested PLIST."
@@ -232,7 +246,8 @@
     (somafm--stop)
     (setq somafm-current-channel id)
     (let ((player-proc (start-process-shell-command "somafm player" "*somafm player*"
-                                                    (format "mpv %s 2> /dev/null"
+                                                    (format "%s %s 2> /dev/null"
+                                                            somafm-player-command
                                                             (plist-get (somafm--quality-handler stream-urls somafm-sound-quality) :url)))))
       (set-process-filter player-proc (lambda (_ output)
                                         (when (string-match "title: \\(.*\\)" output)
@@ -278,10 +293,17 @@
   (when somafm-current-song
     (message "Somafm current song: %s" somafm-current-song)))
 
+(defun somafm--refresh-time-elapsed ()
+  "Determines whether the refresh threshold has been reached."
+  (let ((seconds-since-last-refresh (->> somafm-last-refresh-time
+                                      (time-subtract nil)
+                                      (float-time))))
+    (> seconds-since-last-refresh somafm-refresh-interval)))
+
 (defun somafm ()
   "Refresh channels if we don't have the list already, otherwise show the channel buffer."
   (interactive)
-  (if (not somafm-channels)
+  (if (or (not somafm-channels) (somafm--refresh-time-elapsed))
       (somafm--refresh-channels)
     (somafm--show-channels-buffer)))
 
