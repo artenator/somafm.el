@@ -323,7 +323,7 @@
   "Refresh channels if we don't have the list already, or if the refresh interval has passed, otherwise show the channel buffer."
   (interactive)
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
-      (somafm--refresh-channels t)
+      (somafm--refresh-channels #'somafm--show-channels-buffer)
     (somafm--show-channels-buffer)))
 
 (defun somafm--completing-read ()
