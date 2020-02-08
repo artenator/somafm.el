@@ -156,7 +156,8 @@
         (erase-buffer)
         (somafm--insert-channels)
         (read-only-mode)
-        (somafm-mode)))))
+        (somafm-mode)
+        (setq truncate-lines t)))))
 
 (defun somafm--goto-current-song ()
   "Take point to the song that is currently playing in the channels buffer."
