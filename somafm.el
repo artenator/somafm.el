@@ -35,7 +35,7 @@
     (define-key keymap "p" 'previous-line)
     (define-key keymap (kbd "RET") 'somafm--play)
     (define-key keymap (kbd "<return>") 'somafm--play)
-    (define-key keymap "g" 'somafm--refresh-channels)
+    (define-key keymap "g" 'somafm--refresh-and-show-channels-buffer)
     (define-key keymap "s" 'somafm--stop)
     (define-key keymap "l" 'somafm--sort)
     keymap))
@@ -82,6 +82,11 @@
 (defvar somafm-current-song nil)
 
 (defvar somafm-last-refresh-time 0)
+
+(defun somafm--refresh-and-show-channels-buffer ()
+  "Refresh the channels list and redraw the channels buffer."
+  (interactive)
+  (somafm--refresh-channels #'somafm--show-channels-buffer))
 
 (defun somafm--get-in-plist (plist &rest keys)
   "A helper function that gets a value at KEYS from a nested PLIST."
@@ -333,7 +338,7 @@
   "Refresh channels if we don't have the list already, or if the refresh interval has passed, otherwise show the channel buffer."
   (interactive)
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
-      (somafm--refresh-channels #'somafm--show-channels-buffer)
+      (somafm--refresh-and-show-channels-buffer)
     (somafm--show-channels-buffer)))
 
 (defun somafm--completing-read ()
