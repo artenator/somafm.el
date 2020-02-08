@@ -114,7 +114,7 @@
 
 (defun somafm--insert-channel (channel)
   "Insert CHANNEL in a formatted structure into the current buffer."
-  (-let (((&plist :title title :id id :genre genre :listeners listeners :playlists playlists) channel)
+  (-let (((&plist :title :id :genre :listeners :playlists) channel)
          (somafm-channel-start (point)))
     (somafm--insert-image (plist-get somafm-icons (intern id)))
     (insert (format " %s genre:%s listeners: %s " title genre listeners))
@@ -342,7 +342,7 @@
 (defun somafm-by-completion ()
   (interactive)
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
-      (somafm--refresh-channels 'somafm--completing-read)
+      (somafm--refresh-channels #'somafm--completing-read)
     (somafm--completing-read)))
 
 (provide 'somafm)
