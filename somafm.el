@@ -398,10 +398,11 @@ channels buffer."
          (channel-id (-> (completing-read "Pick a channel:" channels-kv)
                          (assoc channels-kv)
                          (cdr))))
-    (somafm--stop)
-    (somafm--play-by-channel-id channel-id)
-    (somafm--redraw-channels-buffer)
-    (somafm--goto-current-song)))
+    (unless (somafm--currently-playing-this-channel-p channel-id)
+      (somafm--stop)
+      (somafm--play-by-channel-id channel-id)
+      (somafm--redraw-channels-buffer)
+      (somafm--goto-current-song))))
 
 (provide 'somafm)
 ;;; somafm.el ends here
