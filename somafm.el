@@ -61,7 +61,7 @@
   :type 'string)
 
 (defcustom somafm-refresh-interval 300
-  "Number of seconds needed before the channels are automatically refreshed."
+  "Number of seconds needed channels are refreshed."
   :group 'somafm
   :type 'integer)
 
@@ -86,15 +86,16 @@
 (defun somafm ()
   "Refresh channels and display the channels buffer.
 
-If we don't have the list already, or if the refresh interval has
-passed, otherwise show the channel buffer."
+If we don't have the list already, or if the refresh interval
+has passed, otherwise show the channel buffer."
   (interactive)
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
       (somafm--refresh-and-show-channels-buffer)
     (somafm--show-channels-buffer)))
 
 (defun somafm-by-completion ()
-  "Display soma.fm channels using COMPLETING-READ.
+  "Display soma.fm channels using `completing-read'.
+
 Refresh channels list if necessary."
   (interactive)
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
@@ -128,7 +129,7 @@ Refresh channels list if necessary."
               (somafm--clear-rest-of-line))))))))
 
 (defun somafm--sort ()
-  "Sort the channels list view, or unsort it if the list is already sorted."
+  "Sort the channels and show the channels buffer."
   (interactive)
   (if (not somafm-currently-sorted)
       (progn
@@ -157,7 +158,7 @@ Refresh channels list if necessary."
   (somafm--refresh-channels #'somafm--show-channels-buffer))
 
 (defun somafm--get-in-plist (plist &rest keys)
-  "A helper function that gets a value at KEYS from a nested PLIST."
+  "A helper fn that gets a value at KEYS from a nested PLIST."
   (while keys
     (setq plist (plist-get plist (car keys)))
     (setq keys (cdr keys)))
@@ -165,8 +166,9 @@ Refresh channels list if necessary."
 
 (defun somafm--create-overlay-type (type start-point props)
   "Create an overlay with a type TYPE.
-It will have a starting point START-POINT until current position
-of point, with the properties PROPS."
+
+It will have a starting point START-POINT until current
+position of point, with the properties PROPS."
   (let ((ol (make-overlay start-point (point))))
     (overlay-put ol 'somafm-type type)
     (dolist (prop props)
@@ -188,7 +190,7 @@ of point, with the properties PROPS."
     (json-read)))
 
 (defun somafm--insert-channel (channel)
-  "Insert CHANNEL in a formatted structure into the current buffer."
+  "Format CHANNEL and insert it into the current buffer."
   (-let (((&plist :title :id :genre :listeners :playlists) channel)
          (somafm-channel-start (point)))
     (somafm--insert-image (plist-get somafm-icons (intern id)))
@@ -204,16 +206,17 @@ of point, with the properties PROPS."
                                    (id ,id)))))
 
 (defun somafm--get-channel-by-id (channel-list channel-id)
-  "Given a CHANNEL-ID, get the specific channel from CHANNEL-LIST."
+  "Given a CHANNEL-ID, get the channel from CHANNEL-LIST."
   (->> channel-list
        (seq-filter (-lambda ((&plist :id))
                      (string-equal id channel-id)))
        (car)))
 
 (defun somafm--insert-channels ()
-  "Insert a formatted version of all channels in the current channel list in the current buffer."
+  "Insert a formatted version of all channels."
   (dolist (channel-id somafm-current-channel-order)
-    (somafm--insert-channel (somafm--get-channel-by-id somafm-channels channel-id))))
+    (somafm--insert-channel (somafm--get-channel-by-id somafm-channels
+                                                       channel-id))))
 
 (defun somafm--redraw-channels-buffer ()
   "Redraw the channels buffer if it exists."
@@ -230,7 +233,7 @@ of point, with the properties PROPS."
         (setq truncate-lines t)))))
 
 (defun somafm--goto-current-song ()
-  "Take point to the song that is currently playing in the channels buffer."
+  "Take point to the song that is currently playing."
   (-when-let (channels-buffer (get-buffer "*somafm channels*"))
     (with-current-buffer channels-buffer
       (goto-char (point-min))
@@ -238,7 +241,7 @@ of point, with the properties PROPS."
         (beginning-of-line)))))
 
 (defun somafm--show-channels-buffer ()
-  "Get or create the main somafm channels buffer, and insert the formatted channels list."
+  "Get/create channels buffer and insert formatted channels."
   (let ((somafm-buffer (get-buffer-create "*somafm channels*")))
     (with-current-buffer somafm-buffer
       (switch-to-buffer (current-buffer))
@@ -246,7 +249,10 @@ of point, with the properties PROPS."
       (somafm--goto-current-song))))
 
 (defun somafm--insert-image (bytes)
-  "Given a string representation BYTES of bytes, give the proper image encoding and insert an image at point."
+  "Insert an image at point based on BYTES.
+
+Given a string representation BYTES of bytes, give the
+proper image encoding and insert an image at point."
   (-> bytes
       (encode-coding-string 'binary)
       (create-image nil t)
@@ -257,7 +263,11 @@ of point, with the properties PROPS."
   (buffer-substring (point-min) (point-max)))
 
 (defun somafm--refresh-channels (&optional on-success)
-  "Refresh the channels by sending a request to the soma.fm API, and retrieve all the channel images.  Call ON-SUCCESS function if provided."
+  "Refresh the channels.
+
+Send a request to the soma.fm API, update the channels,and
+retrieve all the channel images.  Call ON-SUCCESS function
+if provided."
   (request
     somafm-channels-url
     :parser 'somafm--http-parser
@@ -275,7 +285,11 @@ of point, with the properties PROPS."
                   (somafm--refresh-icons on-success))))))
 
 (defun somafm--refresh-icons (&optional on-success)
-  "Send requests to retrieve the images for each channel in SOMAFM-CHANNELS.  Takes an optional function ON-SUCCESS that is triggered when all the icons have been retrieved."
+  "Refresh the soma.fm icons based on the channels list.
+
+Send requests to retrieve the images for each channel in
+SOMAFM-CHANNELS.  Takes an optional function ON-SUCCESS that
+is triggered when all the icons have been retrieved."
   (let ((count 0)
         (max-count (length somafm-channels)))
     (dolist (channel somafm-channels)
@@ -285,26 +299,25 @@ of point, with the properties PROPS."
           :parser 'somafm--image-parser
           :success (cl-function
                     (lambda (&key data &allow-other-keys)
-                      (setq somafm-icons (plist-put somafm-icons (intern id) data))
+                      (setq somafm-icons (plist-put somafm-icons
+                                                    (intern id)
+                                                    data))
                       (setq count (1+ count))
                       (when (and on-success (>= count max-count))
                         (funcall on-success)))))))))
 
 (defun somafm--get-url-from-quality (stream-urls given-quality)
-  "Given a list of urls STREAM-URLS and a quality setting GIVEN-QUALITY, return the URL with the matching desired quality setting."
+  "Retrieve GIVEN-QUALITY from list STREAM-URLS.
+
+Given a list of urls STREAM-URLS and a quality setting
+GIVEN-QUALITY, return the URL with the matching desired
+quality setting."
   (car (seq-filter (-lambda ((&plist :quality))
                      (string-equal quality given-quality))
                    stream-urls)))
 
-(defun somafm--quality-handler (stream-urls quality)
-  "Given a list of stream urls STREAM-URLS, and desired quality QUALITY, pass to the filter function to retrieve the url."
-  (pcase quality
-    ('highest (somafm--get-url-from-quality stream-urls "highest"))
-    ('high (somafm--get-url-from-quality stream-urls "high"))
-    ('low (somafm--get-url-from-quality stream-urls "low"))))
-
 (defun somafm--format-current-song (current-song)
-  "Formats the current song CURRENT-SONG to be wrapped with parentheses."
+  "Format the current song CURRENT-SONG."
   (format "(%s)" current-song))
 
 (defun somafm--clear-rest-of-line ()
@@ -313,11 +326,13 @@ of point, with the properties PROPS."
     (delete-region (point) (line-end-position))))
 
 (defun somafm--insert-current-song (current-song)
-  "Insert the current song CURRENT-SONG at point in the current buffer."
+  "Insert the current song CURRENT-SONG formatted at point."
   (insert " " (somafm--format-current-song current-song)))
 
 (defun somafm--update-current-song (current-song)
-  "Update the channels buffer with the current song CURRENT-SONG, based on the output of the somafm player process."
+  "Update channels buffer with the current song CURRENT-SONG.
+
+Based on the output of the somafm player process."
   (let ((inhibit-read-only t))
     (setq somafm-current-song current-song)
     (-when-let (channels-buf (get-buffer "*somafm channels*"))
@@ -330,21 +345,31 @@ of point, with the properties PROPS."
           (read-only-mode))))))
 
 (defun somafm--play-by-channel-id (channel-id)
-  "Given a CHANNEL-ID, start playback of the specified channel and update the currently playing song."
+  "Given a CHANNEL-ID, start playback of the channel.
+
+Also update the currently playing song SOMAFM-CURRENT-SONG."
   (setq somafm-current-channel channel-id)
-  (-let* (((&plist :playlists stream-urls) (somafm--get-channel-by-id somafm-channels channel-id))
-          (player-proc (start-process-shell-command "somafm player"
-                                                    "*somafm player*"
-                                                    (format "%s %s 2> /dev/null"
-                                                            somafm-player-command
-                                                            (plist-get (somafm--quality-handler stream-urls somafm-sound-quality)
-                                                                       :url)))))
-    (set-process-filter player-proc (lambda (_ output)
-                                      (when (string-match "title: \\(.*\\)" output)
-                                        (somafm--update-current-song (match-string 1 output)))))))
+  (-let* (((&plist :playlists stream-urls)
+           (somafm--get-channel-by-id somafm-channels channel-id))
+          ((&plist :url stream-url)
+           (somafm--get-url-from-quality stream-urls
+                                         (symbol-name somafm-sound-quality)))
+          (player-proc
+           (start-process-shell-command "somafm player"
+                                        "*somafm player*"
+                                        (format "%s %s 2> /dev/null"
+                                                somafm-player-command
+                                                stream-url))))
+    (set-process-filter player-proc
+                        (lambda (_ output)
+                          (when (string-match "title: \\(.*\\)" output)
+                            (somafm--update-current-song (match-string 1 output)))))))
 
 (defun somafm--currently-playing-this-channel-p (channel-id)
-  "Check to see if the channel currently being played is equal to CHANNEL-ID.  Will always return false if the player process is not running."
+  "Check if currently played channel is CHANNEL-ID.
+
+Will always return false if the player process is not
+running."
   (and (equal somafm-current-channel channel-id) (get-process "somafm player")))
 
 (defun somafm--refresh-time-elapsed-p ()
@@ -354,14 +379,22 @@ of point, with the properties PROPS."
                                          (float-time))))
     (> seconds-since-last-refresh somafm-refresh-interval)))
 
+(defun somafm--get-channels-kv ()
+  "Return a list of key/values based on the channel order.
 
+The list is structured like this: '((song-title song-id))."
+  (mapcar (lambda (channel-id)
+            (-let (((&plist :title :id) (somafm--get-channel-by-id somafm-channels
+                                                                   channel-id)))
+              (cons title id)))
+          somafm-current-channel-order))
 
 (defun somafm--completing-read ()
-  "Perform the completing read, start playback, and update the channels buffer if it exists."
-  (let* ((channels-kv (mapcar (lambda (channel-id)
-                                (-let (((&plist :title :id) (somafm--get-channel-by-id somafm-channels channel-id)))
-                                  (cons title id)))
-                              somafm-current-channel-order))
+  "Allow picking a channel via `completing-read'.
+
+Perform the completing read, start playback, and update the
+channels buffer."
+  (let* ((channels-kv (somafm--get-channels-kv))
          (channel-id (-> (completing-read "Pick a channel:" channels-kv)
                          (assoc channels-kv)
                          (cdr))))
