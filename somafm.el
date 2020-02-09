@@ -382,11 +382,14 @@ running."
 (defun somafm--get-channels-kv ()
   "Return a list of key/values based on the channel order.
 
-The list is structured like this: '((song-title song-id))."
+The list is structured like this: '((chan-title chan-id))."
   (mapcar (lambda (channel-id)
-            (-let (((&plist :title :id) (somafm--get-channel-by-id somafm-channels
-                                                                   channel-id)))
-              (cons title id)))
+            (-let* (((&plist :title :id) (somafm--get-channel-by-id somafm-channels
+                                                                    channel-id))
+                    (formatted-title (if (string= somafm-current-channel id)
+                                         (concat title " ►")
+                                       title)))
+              (cons formatted-title id)))
           somafm-current-channel-order))
 
 (defun somafm--completing-read ()
