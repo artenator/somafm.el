@@ -29,7 +29,7 @@
 (require 'dash)
 (require 'request)
 
-(defconst somafm-mode-map
+(defvar somafm-mode-map
   (let ((keymap (make-sparse-keymap)))
     (define-key keymap "n" 'next-line)
     (define-key keymap "p" 'previous-line)
