@@ -180,9 +180,9 @@ position of point, with the properties PROPS."
   "Get an overlay of type S at the current point or at POS."
   (let ((all-overlays (overlays-at (or pos (point)))))
     (car (seq-filter (lambda (ol)
-		       (let ((ol-type (overlay-get ol 'somafm-type)))
-			 (and ol-type (string-match-p s ol-type))))
-		     all-overlays))))
+                       (let ((ol-type (overlay-get ol 'somafm-type)))
+                         (and ol-type (string-match-p s ol-type))))
+                     all-overlays))))
 
 (defun somafm--http-parser ()
   "JSON parser for http requests."
@@ -409,4 +409,9 @@ channels buffer."
       (somafm--goto-current-song))))
 
 (provide 'somafm)
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
+
 ;;; somafm.el ends here
