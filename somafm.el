@@ -30,7 +30,7 @@
 (require 'request)
 
 (defconst somafm-mode-map
-  (let ((keymap (make-keymap)))
+  (let ((keymap (make-sparse-keymap)))
     (define-key keymap "n" 'next-line)
     (define-key keymap "p" 'previous-line)
     (define-key keymap (kbd "RET") 'somafm--play)
