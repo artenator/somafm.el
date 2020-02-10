@@ -38,7 +38,8 @@
     (define-key keymap "g" 'somafm--refresh-and-show-channels-buffer)
     (define-key keymap "s" 'somafm--stop)
     (define-key keymap "l" 'somafm--sort)
-    keymap))
+    keymap)
+  "Keymap for `somafm-mode'.")
 
 (define-derived-mode somafm-mode special-mode "somafm-mode"
   "somafm - somafm mode
