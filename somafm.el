@@ -29,8 +29,8 @@
 (require 'dash)
 (require 'request)
 
-(defconst somafm-mode-map
-  (let ((keymap (make-keymap)))
+(defvar somafm-mode-map
+  (let ((keymap (make-sparse-keymap)))
     (define-key keymap "n" 'next-line)
     (define-key keymap "p" 'previous-line)
     (define-key keymap (kbd "RET") 'somafm--play)
@@ -38,7 +38,8 @@
     (define-key keymap "g" 'somafm--refresh-and-show-channels-buffer)
     (define-key keymap "s" 'somafm--stop)
     (define-key keymap "l" 'somafm--sort)
-    keymap))
+    keymap)
+  "Keymap for `somafm-mode'.")
 
 (define-derived-mode somafm-mode special-mode "somafm-mode"
   "somafm - somafm mode
@@ -179,9 +180,9 @@ position of point, with the properties PROPS."
   "Get an overlay of type S at the current point or at POS."
   (let ((all-overlays (overlays-at (or pos (point)))))
     (car (seq-filter (lambda (ol)
-		       (let ((ol-type (overlay-get ol 'somafm-type)))
-			 (and ol-type (string-match-p s ol-type))))
-		     all-overlays))))
+                       (let ((ol-type (overlay-get ol 'somafm-type)))
+                         (and ol-type (string-match-p s ol-type))))
+                     all-overlays))))
 
 (defun somafm--http-parser ()
   "JSON parser for http requests."
@@ -408,4 +409,9 @@ channels buffer."
       (somafm--goto-current-song))))
 
 (provide 'somafm)
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
+
 ;;; somafm.el ends here
