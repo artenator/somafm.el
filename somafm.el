@@ -66,7 +66,10 @@
   :group 'somafm
   :type 'integer)
 
-(defvar somafm-test (float-time))
+(defcustom somafm-display-in-modeline t
+  "Display the current song in the modeline."
+  :group 'somafm
+  :type 'boolean)
 
 (defvar somafm-channels nil)
 
@@ -146,6 +149,11 @@ Refresh channels list if necessary."
     (setq somafm-currently-sorted nil))
   (somafm--show-channels-buffer)
   (move-beginning-of-line nil))
+
+(defun somafm-mode-line-indicator ()
+  "Return a formatted string of the current song."
+  (when somafm-current-song
+    (list "🎵" (somafm--format-current-song somafm-current-song) " ")))
 
 (defun somafm-current-song ()
   "Display the current song in the echo area."
@@ -349,6 +357,10 @@ Based on the output of the somafm player process."
   "Given a CHANNEL-ID, start playback of the channel.
 
 Also update the currently playing song SOMAFM-CURRENT-SONG."
+  (unless (assoc 'somafm-display-in-modeline mode-line-misc-info)
+    (add-to-list 'mode-line-misc-info
+                 '(somafm-display-in-modeline
+                   (:eval (somafm-mode-line-indicator)))))
   (setq somafm-current-channel channel-id)
   (-let* (((&plist :playlists stream-urls)
            (somafm--get-channel-by-id somafm-channels channel-id))
