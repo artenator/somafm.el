@@ -6,12 +6,22 @@ A simple somafm interface in emacs
 ## Installation
 - Ensure you have `mpv` installed. 
   - On macOS: `brew install mpv`
-- Clone the repository and make sure it's in your load path.
+
+### With use-package
+- Clone the repository
+- Ensure the load-path is properly set based on the directory you cloned to.
+  If it was cloned to `~/.emacs.d`, this should work.
+  ```lisp
+  (use-package somafm
+    :load-path "somafm.el")
   ```
+### Without use-package
+- Clone the repository and make sure it's in your load path.
+  ```lisp
   (add-to-list 'load-path "~/.emacs.d/somafm.el")
   ```
 - Require the package
-  ```
+  ```lisp
   (require 'somafm)
   ```
 - Done!
