@@ -2,6 +2,7 @@
 A simple somafm interface in emacs
 
 Note: **This is not an official SomaFM project**
+
 I built this for fun because of my love for SomaFM.
 
 ![somafm.el screenshot](/screenshot.png "somafm.el screenshot")
@@ -9,6 +10,12 @@ I built this for fun because of my love for SomaFM.
 ## Installation
 - Ensure you have `mpv` installed. 
   - On macOS: `brew install mpv`
+
+### With use-package & melpa
+- ```lisp
+  (use-package somafm
+    :ensure t)
+  ```
 
 ### With use-package
 - Clone the repository
