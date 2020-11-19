@@ -1,6 +1,9 @@
 # somafm.el
 A simple somafm interface in emacs
 
+Note: **This is not an official SomaFM project**
+I built this for fun because of my love for SomaFM.
+
 ![somafm.el screenshot](/screenshot.png "somafm.el screenshot")
 
 ## Installation
