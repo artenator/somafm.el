@@ -71,6 +71,12 @@
   :group 'somafm
   :type 'boolean)
 
+(defcustom somafm-favorites-file
+  (expand-file-name ".somafm-favorites" user-emacs-directory)
+  "Path to the favorites."
+  :group 'somafm
+  :type 'string)
+
 (defvar somafm-channels nil)
 
 (defvar somafm-original-channel-order '())
@@ -105,6 +111,31 @@ Refresh channels list if necessary."
   (if (or (not somafm-channels) (somafm--refresh-time-elapsed-p))
       (somafm--refresh-channels #'somafm--completing-read)
     (somafm--completing-read)))
+
+(defun somafm-add-current-song-to-favorites ()
+  "Add current song to favorites if it is not already starred.
+
+If the favorite file doesn't exist it will be created."
+  (interactive)
+  (if (not (somafm--favorite-p somafm-current-song))
+      (with-current-buffer (find-file-noselect somafm-favorites-file)
+        (save-excursion
+          (goto-char (point-max))
+          (insert (concat somafm-current-song (unless (looking-at "\n") "\n"))))
+        (save-buffer)
+        (message "Favorite saved in %s" somafm-favorites-file))
+    (message "Favorite already exists!")))
+
+(defun somafm-delete-current-song-from-favorites ()
+  (interactive)
+  (if (somafm--favorite-p somafm-current-song)
+      (with-current-buffer (find-file-noselect somafm-favorites-file)
+        (save-excursion                 ; in case the buffer is open
+          (goto-char (point-min))
+          (flush-lines (somafm--make-favorite-regexp somafm-current-song)))
+        (save-buffer)
+        (message "Favorite deleted from %s" somafm-favorites-file))
+    (message "Current song is not a favorite!")))
 
 (defun somafm--play ()
   "Play the currently selected channel at point."
@@ -150,10 +181,25 @@ Refresh channels list if necessary."
   (somafm--show-channels-buffer)
   (move-beginning-of-line nil))
 
+(defun somafm--favorite-p (song)
+  "Check if SONG is in the favorites file."
+  (if (file-exists-p somafm-favorites-file)
+      (with-temp-buffer
+        (insert-file-contents somafm-favorites-file)
+        (goto-char (point-min))
+        (search-forward-regexp
+         (somafm--make-favorite-regexp song)
+         nil t))))
+
+(defun somafm--make-favorite-regexp (song)
+  (concat "^" (regexp-quote song) "$"))
+
 (defun somafm-mode-line-indicator ()
   "Return a formatted string of the current song."
   (when somafm-current-song
-    (list "🎵" (somafm--format-current-song somafm-current-song) " ")))
+    (list
+     (if (somafm--favorite-p somafm-current-song) "❤️" "🎵")
+     (somafm--format-current-song somafm-current-song) " ")))
 
 (defun somafm-current-song ()
   "Display the current song in the echo area."
