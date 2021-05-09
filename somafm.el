@@ -198,7 +198,7 @@ If the favorite file doesn't exist it will be created."
   "Return a formatted string of the current song."
   (when somafm-current-song
     (list
-     (if (somafm--favorite-p somafm-current-song) "❤️" "🎵")
+     (if (somafm--favorite-p somafm-current-song) "❤" "🎵")
      (somafm--format-current-song somafm-current-song) " ")))
 
 (defun somafm-current-song ()
