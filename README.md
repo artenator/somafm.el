@@ -8,7 +8,7 @@ I built this for fun because of my love for SomaFM.
 ![somafm.el screenshot](/screenshot.png "somafm.el screenshot")
 
 ## Installation
-- Ensure you have `mpv` installed. 
+- Ensure you have `mpv` installed.
   - On macOS: `brew install mpv`
 
 ### With use-package & melpa
@@ -46,7 +46,12 @@ I built this for fun because of my love for SomaFM.
 
 - The current song will be shown next to the current channel
   - Or you can use `M-x somafm-current-song` to display the current song in the echo area.
-  
+
+- You can add the current song to your favorites file (see
+  `somafm-favorites-file`) by calling
+  `somafm-add-current-song-to-favorites`, and delete it by calling
+  `somafm-delete-current-song-from-favorites`.
+
 ## Customization
 
 - You can set the `somafm-sound-quality` custom to 'highest, 'high, or 'low to set the streaming quality.
