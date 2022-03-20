@@ -127,6 +127,7 @@ If the favorite file doesn't exist it will be created."
     (message "Favorite already exists!")))
 
 (defun somafm-delete-current-song-from-favorites ()
+  "Delete current song from favorites if it exists."
   (interactive)
   (if (somafm--favorite-p somafm-current-song)
       (with-current-buffer (find-file-noselect somafm-favorites-file)
@@ -192,6 +193,7 @@ If the favorite file doesn't exist it will be created."
          nil t))))
 
 (defun somafm--make-favorite-regexp (song)
+  "Build a regexp to detect SONG in the favorites file."
   (concat "^" (regexp-quote song) "$"))
 
 (defun somafm-mode-line-indicator ()

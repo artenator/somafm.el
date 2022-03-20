@@ -55,3 +55,16 @@ I built this for fun because of my love for SomaFM.
 ## Customization
 
 - You can set the `somafm-sound-quality` custom to 'highest, 'high, or 'low to set the streaming quality.
+
+## Contributing
+
+This project uses
+[buttercup](https://github.com/jorgenschaefer/emacs-buttercup) for
+tests. To run them:
+
+1. Install [Cask](https://github.com/cask/cask).
+
+2. Run the `cask` command in the project's root directory to install
+   dependencies.
+
+3. Execute tests: `cask exec buttercup -L .`
