@@ -184,13 +184,13 @@ If the favorite file doesn't exist it will be created."
 
 (defun somafm--favorite-p (song)
   "Check if SONG is in the favorites file."
-  (if (file-exists-p somafm-favorites-file)
-      (with-temp-buffer
-        (insert-file-contents somafm-favorites-file)
-        (goto-char (point-min))
-        (search-forward-regexp
-         (somafm--make-favorite-regexp song)
-         nil t))))
+  (when (file-exists-p somafm-favorites-file)
+    (with-temp-buffer
+      (insert-file-contents somafm-favorites-file)
+      (goto-char (point-min))
+      (search-forward-regexp
+       (somafm--make-favorite-regexp song)
+       nil t))))
 
 (defun somafm--make-favorite-regexp (song)
   "Build a regexp to detect SONG in the favorites file."
