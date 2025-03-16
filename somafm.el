@@ -38,6 +38,8 @@
     (define-key keymap "g" 'somafm--refresh-and-show-channels-buffer)
     (define-key keymap "s" 'somafm--stop)
     (define-key keymap "l" 'somafm--sort)
+    (define-key keymap "+" 'somafm-player-volume-up)
+    (define-key keymap "-" 'somafm-player-volume-down)
     keymap)
   "Keymap for `somafm-mode'.")
 
@@ -74,6 +76,16 @@
 (defcustom somafm-favorites-file
   (expand-file-name ".somafm-favorites" user-emacs-directory)
   "Path to the favorites."
+  :group 'somafm
+  :type 'string)
+
+(defcustom somafm-mpv-volume-up-key "0"
+  "Key to send to mpv to turn up the volume."
+  :group 'somafm
+  :type 'string)
+
+(defcustom somafm-mpv-volume-down-key "9"
+  "Key to send to mpv to turn down the volume."
   :group 'somafm
   :type 'string)
 
@@ -163,6 +175,43 @@ If the favorite file doesn't exist it will be created."
             (when (search-forward "►" nil t)
               (delete-char -1)
               (somafm--clear-rest-of-line))))))))
+
+(defun somafm--mpv-volume-control (steps direction)
+  "Modify the volume n STEPS in DIRECTION."
+  (let ((steps (if steps steps 1))
+        (direction-key (if (eq 'up direction)
+                           somafm-mpv-volume-up-key
+                         somafm-mpv-volume-down-key)))
+    (dotimes (_ steps)
+      (process-send-string "somafm player" direction-key))))
+
+(defun somafm--mpv-volume-up (arg)
+  "Turn the volume up for mpv ARG steps."
+  (somafm--mpv-volume-control arg 'up))
+
+(defun somafm--mpv-volume-down (arg)
+  "Turn the volume down for mpv ARG steps."
+  (somafm--mpv-volume-control arg 'down))
+
+(defun somafm-player-volume-up (arg)
+  "Turn the volume up ARG steps. "
+  (interactive "P")
+  (cond
+   ((string= somafm-player-command "mpv")
+    (somafm--mpv-volume-up arg))
+   (t (message (format
+                "Volume controls not implemented for %s"
+                somafm-player-command)))))
+
+(defun somafm-player-volume-down (arg)
+  "Turn the volume down ARG steps."
+  (interactive "P")
+  (cond
+   ((string= somafm-player-command "mpv")
+    (somafm--mpv-volume-down arg))
+   (t (message (format
+                "Volume controls not implemented for %s"
+                somafm-player-command)))))
 
 (defun somafm--sort ()
   "Sort the channels and show the channels buffer."
