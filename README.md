@@ -1,17 +1,24 @@
-# somafm.el
-A simple somafm interface in emacs
+# somafm.el | A simple somafm interface in emacs
+
+[![MELPA](https://melpa.org/packages/somafm-badge.svg)](https://melpa.org/#/somafm)
+![EMACS](https://img.shields.io/badge/Supports-Emacs_26.1%E2%80%9330.2-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white)
+
 
 Note: **This is not an official SomaFM project**
 
 I built this for fun because of my love for SomaFM.
 
-![somafm.el screenshot](/screenshot.png "somafm.el screenshot")
+[Install](#install) • [Usage](#usage) • [Screenshots](#screenshots) • [Customization](#customization) • [Contribute](#contributing)
 
-## Installation
+# Install
 - Ensure you have `mpv` installed.
   - On macOS: `brew install mpv`
+  
+# Screenshots
+![somafm.el screenshot](/screenshot.png "somafm.el screenshot")
+![somafm.el screenshot 2](/screenshot2.png "somafm.el screenshot 2")
 
-### With use-package & melpa
+## With use-package & melpa
 - ```lisp
   (use-package somafm
     :ensure t)
@@ -25,7 +32,7 @@ I built this for fun because of my love for SomaFM.
   (use-package somafm
     :load-path "somafm.el")
   ```
-### Without use-package
+## Without use-package
 - Clone the repository and make sure it's in your load path.
   ```lisp
   (add-to-list 'load-path "~/.emacs.d/somafm.el")
@@ -36,7 +43,7 @@ I built this for fun because of my love for SomaFM.
   ```
 - Done!
 
-## Usage
+# Usage
 - Launch the soma.fm channel browser via `M-x somafm`
 - Use `n` and `p` to navigate
 - Press `<return>` to start streaming the highlighted channel
@@ -52,11 +59,11 @@ I built this for fun because of my love for SomaFM.
   `somafm-add-current-song-to-favorites`, and delete it by calling
   `somafm-delete-current-song-from-favorites`.
 
-## Customization
+# Customization
 
 - You can set the `somafm-sound-quality` custom to 'highest, 'high, or 'low to set the streaming quality.
 
-## Contributing
+# Contributing
 
 This project uses
 [buttercup](https://github.com/jorgenschaefer/emacs-buttercup) for
